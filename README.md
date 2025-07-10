@@ -1,166 +1,87 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/alex2yang97-yahoo-finance-mcp-badge.png)](https://mseep.ai/app/alex2yang97-yahoo-finance-mcp)
+# Yahoo Finance API Server
 
-# Yahoo Finance MCP Server
+This project provides a RESTful API server to access comprehensive financial data from Yahoo Finance using the `yfinance` library. It is built with FastAPI and is ready for deployment as a Docker container.
 
-<div align="right">
-  <a href="README.md">English</a> | <a href="README.zh.md">中文</a>
-</div>
+## Features
 
-This is a Model Context Protocol (MCP) server that provides comprehensive financial data from Yahoo Finance. It allows you to retrieve detailed information about stocks, including historical prices, company information, financial statements, options data, and market news.
+-   **Modern API**: Built with FastAPI, providing high performance and automatic OpenAPI documentation.
+-   **Comprehensive Data**: Access a wide range of financial data:
+    -   Historical stock prices (OHLCV)
+    -   Detailed stock information (company profile, financial metrics, etc.)
+    -   Latest company news
+    -   Stock actions (dividends and splits)
+    -   Financial statements (income statement, balance sheet, cash flow)
+    -   Holder information (major, institutional, etc.)
+    -   Options data (expiration dates and option chains)
+    -   Analyst recommendations and upgrades/downgrades.
+-   **Dockerized**: Includes a `Dockerfile` for easy containerization and deployment to any cloud environment.
+-   **Auto-generated Docs**: Interactive API documentation is available at the `/docs` endpoint.
 
-[![smithery badge](https://smithery.ai/badge/@Alex2Yang97/yahoo-finance-mcp)](https://smithery.ai/server/@Alex2Yang97/yahoo-finance-mcp)
+## Getting Started
 
-## Demo
+### Prerequisites
 
-![MCP Demo](assets/demo.gif)
+-   Python 3.11+
+-   [uv](https://github.com/astral-sh/uv) (recommended for environment and package management)
 
-## MCP Tools
+### Installation & Running Locally
 
-The server exposes the following tools through the Model Context Protocol:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/nsj02/yahoo-finance-mcp.git
+    cd yahoo-finance-mcp
+    ```
 
-### Stock Information
+2.  **Create a virtual environment and install dependencies:**
+    ```bash
+    uv venv
+    source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+    uv pip install -r pyproject.toml
+    ```
 
-| Tool | Description |
-|------|-------------|
-| `get_historical_stock_prices` | Get historical OHLCV data for a stock with customizable period and interval |
-| `get_stock_info` | Get comprehensive stock data including price, metrics, and company details |
-| `get_yahoo_finance_news` | Get latest news articles for a stock |
-| `get_stock_actions` | Get stock dividends and splits history |
+3.  **Run the server:**
+    ```bash
+    uvicorn server:app --reload
+    ```
+    The server will be running at `http://127.0.0.1:8000`.
 
-### Financial Statements
+### API Documentation
 
-| Tool | Description |
-|------|-------------|
-| `get_financial_statement` | Get income statement, balance sheet, or cash flow statement (annual/quarterly) |
-| `get_holder_info` | Get major holders, institutional holders, mutual funds, or insider transactions |
+Once the server is running, you can access the interactive API documentation (powered by Swagger UI) by navigating to:
 
-### Options Data
+[**http://127.0.0.1:8000/docs**](http://127.0.0.1:8000/docs)
 
-| Tool | Description |
-|------|-------------|
-| `get_option_expiration_dates` | Get available options expiration dates |
-| `get_option_chain` | Get options chain for a specific expiration date and type (calls/puts) |
+This interface allows you to explore and test all the available API endpoints directly from your browser.
 
-### Analyst Information
+## Deployment with Docker
 
-| Tool | Description |
-|------|-------------|
-| `get_recommendations` | Get analyst recommendations or upgrades/downgrades history |
+This project is configured for easy deployment using Docker.
 
-## Real-World Use Cases
+1.  **Build the Docker image:**
+    ```bash
+    docker build -t yahoo-finance-api .
+    ```
 
-With this MCP server, you can use Claude to:
+2.  **Run the Docker container:**
+    ```bash
+    docker run -d -p 8000:8000 --name yahoo-finance-api-container yahoo-finance-api
+    ```
+    The API will be accessible at `http://localhost:8000`.
 
-### Stock Analysis
+## Available API Endpoints
 
-- **Price Analysis**: "Show me the historical stock prices for AAPL over the last 6 months with daily intervals."
-- **Financial Health**: "Get the quarterly balance sheet for Microsoft."
-- **Performance Metrics**: "What are the key financial metrics for Tesla from the stock info?"
-- **Trend Analysis**: "Compare the quarterly income statements of Amazon and Google."
-- **Cash Flow Analysis**: "Show me the annual cash flow statement for NVIDIA."
+Here is a summary of the main API endpoints. For detailed parameters and response models, please refer to the [API documentation](#api-documentation).
 
-### Market Research
-
-- **News Analysis**: "Get the latest news articles about Meta Platforms."
-- **Institutional Activity**: "Show me the institutional holders of Apple stock."
-- **Insider Trading**: "What are the recent insider transactions for Tesla?"
-- **Options Analysis**: "Get the options chain for SPY with expiration date 2024-06-21 for calls."
-- **Analyst Coverage**: "What are the analyst recommendations for Amazon over the last 3 months?"
-
-### Investment Research
-
-- "Create a comprehensive analysis of Microsoft's financial health using their latest quarterly financial statements."
-- "Compare the dividend history and stock splits of Coca-Cola and PepsiCo."
-- "Analyze the institutional ownership changes in Tesla over the past year."
-- "Generate a report on the options market activity for Apple stock with expiration in 30 days."
-- "Summarize the latest analyst upgrades and downgrades in the tech sector over the last 6 months."
-
-## Requirements
-
-- Python 3.11 or higher
-- Dependencies as listed in `pyproject.toml`, including:
-  - mcp
-  - yfinance
-  - pandas
-  - pydantic
-  - and other packages for data processing
-
-## Setup
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/Alex2Yang97/yahoo-finance-mcp.git
-   cd yahoo-finance-mcp
-   ```
-
-2. Create and activate a virtual environment and install dependencies:
-   ```bash
-   uv venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   uv pip install -e .
-   ```
-
-## Usage
-
-### Development Mode
-
-You can test the server with MCP Inspector by running:
-
-```bash
-uv run server.py
-```
-
-This will start the server and allow you to test the available tools.
-
-### Integration with Claude for Desktop
-
-To integrate this server with Claude for Desktop:
-
-1. Install Claude for Desktop to your local machine.
-2. Install VS Code to your local machine. Then run the following command to open the `claude_desktop_config.json` file:
-   - MacOS: `code ~/Library/Application\ Support/Claude/claude_desktop_config.json`
-   - Windows: `code $env:AppData\Claude\claude_desktop_config.json`
-
-3. Edit the Claude for Desktop config file, located at:
-   - macOS: 
-     ```json
-     {
-       "mcpServers": {
-         "yfinance": {
-           "command": "uv",
-           "args": [
-             "--directory",
-             "/ABSOLUTE/PATH/TO/PARENT/FOLDER/yahoo-finance-mcp",
-             "run",
-             "server.py"
-           ]
-         }
-       }
-     }
-     ```
-   - Windows:
-     ```json
-     {
-       "mcpServers": {
-         "yfinance": {
-           "command": "uv",
-           "args": [
-             "--directory",
-             "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\yahoo-finance-mcp",
-             "run",
-             "server.py"
-           ]
-         }
-       }
-     }
-     ```
-
-   - **Note**: You may need to put the full path to the uv executable in the command field. You can get this by running `which uv` on MacOS/Linux or `where uv` on Windows.
-
-4. Restart Claude for Desktop
+-   `GET /stock/history`: Get historical stock prices.
+-   `GET /stock/info`: Get comprehensive stock information.
+-   `GET /stock/news`: Get the latest news for a stock.
+-   `GET /stock/actions`: Get stock dividends and splits.
+-   `GET /stock/financials`: Get financial statements.
+-   `GET /stock/holders`: Get holder information.
+-   `GET /stock/options/expirations`: Get option expiration dates.
+-   `GET /stock/options/chain`: Get the full option chain for a given expiration date.
+-   `GET /stock/recommendations`: Get analyst recommendations.
 
 ## License
 
-MIT
-
-
+This project is licensed under the MIT License.

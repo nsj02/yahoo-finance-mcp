@@ -1,41 +1,20 @@
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS uv
-
-# Install the project into /app
-WORKDIR /app
-
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
-
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
-
-# Copy project files
-COPY pyproject.toml .
-
-# Install the project's dependencies using uv
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -e .
-
-# Copy the rest of the application code
-COPY . .
-
-# Second stage: runtime image
+# 1. 베이스 이미지 선택
 FROM python:3.11-slim
 
+# 2. 작업 디렉토리 설정
 WORKDIR /app
 
-# Copy the virtual environment from the uv stage
-COPY --from=uv /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=uv /usr/local/bin /usr/local/bin
+# 3. 의존성 파일 복사 및 설치
+COPY pyproject.toml . 
+# Using uv for faster installation
+RUN pip install uv
+RUN uv pip install --no-cache-dir -r pyproject.toml
 
-# Copy application code
+# 4. 소스 코드 복사
 COPY . .
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+# 5. 서버 실행 포트 노출
+EXPOSE 8000
 
-# Command to run the MCP server
-CMD ["uv", "run", "server.py"]
+# 6. 서버 실행 명령어
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

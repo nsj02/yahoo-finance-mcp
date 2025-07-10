@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pyproject.toml . 
 # Using uv for faster installation
 RUN pip install uv
-RUN uv pip install --no-cache-dir -r pyproject.toml
+RUN uv pip install --system --no-cache-dir -r pyproject.toml
 
 # 4. 소스 코드 복사
 COPY . .

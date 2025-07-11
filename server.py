@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # ==============================================================================
@@ -70,6 +71,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS 설정 추가 (하이퍼클로바 스튜디오 호환성)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*",  # 모든 오리진 허용 (프로덕션에서는 제한 필요)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # OpenAPI 3.0.3 스키마를 사용하도록 강제 설정
 def custom_openapi():
     if app.openapi_schema:
@@ -85,6 +97,18 @@ def custom_openapi():
     
     # OpenAPI 버전을 3.0.3으로 강제 설정
     openapi_schema["openapi"] = "3.0.3"
+    
+    # 네이버클라우드 서버 정보 추가
+    openapi_schema["servers"] = [
+        {
+            "url": "http://49.50.131.32:8000",
+            "description": "Naver Cloud Platform Server"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Local development server"
+        }
+    ]
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema

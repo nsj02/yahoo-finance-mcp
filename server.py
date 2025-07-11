@@ -45,9 +45,30 @@ class StockActionData(BaseModel):
     Dividends: Optional[float] = None
     Stock_Splits: Optional[float] = Field(None, alias='Stock Splits')
 
-FinancialsData = Any
-HolderData = Any
-RecommendationData = Any
+class FinancialsData(BaseModel):
+    index: str
+    # 동적 연도 열을 처리하기 위해 추가 데이터를 허용
+    class Config:
+        extra = 'allow'
+
+class HolderData(BaseModel):
+    index: str
+    Value: Optional[float] = None
+    # 다양한 홀더 데이터 타입을 처리하기 위해 추가 데이터를 허용
+    class Config:
+        extra = 'allow'
+
+class RecommendationData(BaseModel):
+    index: Optional[int] = None
+    period: Optional[str] = None
+    strongBuy: Optional[int] = None
+    buy: Optional[int] = None
+    hold: Optional[int] = None
+    sell: Optional[int] = None
+    strongSell: Optional[int] = None
+    # 업그레이드/다운그레이드 데이터를 위해 추가 데이터를 허용
+    class Config:
+        extra = 'allow'
 
 # 옵션 관련 모델들은 제거됨
 
@@ -188,7 +209,7 @@ def get_stock_actions(ticker: str = Query(..., description="조회할 주식의 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stock/financials", summary="재무제표 조회", response_model=FinancialsData, responses=common_responses)
+@app.get("/stock/financials", summary="재무제표 조회", response_model=List[FinancialsData], responses=common_responses)
 def get_financial_statement(
     ticker: str = Query(..., description="조회할 주식의 티커", example="AAPL"),
     financial_type: FinancialType = Query(..., description="조회할 재무제표 종류", example="income_stmt"),
@@ -235,7 +256,7 @@ def get_holder_info(
 # 옵션 관련 API는 타입 변환 문제로 인해 제거됨
 
 
-@app.get("/stock/recommendations", summary="애널리스트 추천 정보 조회", response_model=RecommendationData, responses=common_responses)
+@app.get("/stock/recommendations", summary="애널리스트 추천 정보 조회", response_model=List[RecommendationData], responses=common_responses)
 def get_recommendations(
     ticker: str = Query(..., description="조회할 주식의 티커", example="AAPL"),
     recommendation_type: RecommendationType = Query("recommendations", description="조회할 추천 정보 종류", example="upgrades_downgrades"),

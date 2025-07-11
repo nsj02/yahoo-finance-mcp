@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 # ==============================================================================
 # 1. Pydantic 응답 모델(Response Models) - 최종 수정본
@@ -16,59 +16,23 @@ from pydantic import BaseModel, Field
 
 class Message(BaseModel):
     message: str
-
-class StockHistoryData(BaseModel):
-    Date: str
-    Open: Optional[float] = None
-    High: Optional[float] = None
-    Low: Optional[float] = None
-    Close: Optional[float] = None
-    Volume: Optional[int] = None
-    Dividends: Optional[float] = None
-    Stock_Splits: Optional[float] = Field(None, alias='Stock Splits')
-
-class StockInfoData(BaseModel):
-    symbol: str
-    shortName: Optional[str] = None
-    longName: Optional[str] = None
-    currency: Optional[str] = None
-    country: Optional[str] = None
-    marketCap: Optional[int] = None
     
     class Config:
-        extra = 'ignore'
+        extra = 'forbid'
 
-# NewsData 모델 삭제됨
+# 기본 주식 데이터 모델들을 Dict로 대체다을 사용
+StockHistoryData = Dict[str, Any]
+StockInfoData = Dict[str, Any]
+StockActionData = Dict[str, Any]
 
-class StockActionData(BaseModel):
-    Date: str
-    Dividends: Optional[float] = None
-    Stock_Splits: Optional[float] = Field(None, alias='Stock Splits')
+# 재무제표 데이터를 위해 간단한 Dict 타입 사용
+FinancialsData = Dict[str, Any]
 
-class FinancialsData(BaseModel):
-    index: str
-    # 동적 연도 열을 처리하기 위해 추가 데이터를 허용
-    class Config:
-        extra = 'allow'
+# 홀더 데이터를 위해 간단한 Dict 타입 사용
+HolderData = Dict[str, Any]
 
-class HolderData(BaseModel):
-    index: str
-    Value: Optional[float] = None
-    # 다양한 홀더 데이터 타입을 처리하기 위해 추가 데이터를 허용
-    class Config:
-        extra = 'allow'
-
-class RecommendationData(BaseModel):
-    index: Optional[int] = None
-    period: Optional[str] = None
-    strongBuy: Optional[int] = None
-    buy: Optional[int] = None
-    hold: Optional[int] = None
-    sell: Optional[int] = None
-    strongSell: Optional[int] = None
-    # 업그레이드/다운그레이드 데이터를 위해 추가 데이터를 허용
-    class Config:
-        extra = 'allow'
+# 추천 데이터를 위해 간단한 Dict 타입 사용
+RecommendationData = Dict[str, Any]
 
 # 옵션 관련 모델들은 제거됨
 
@@ -106,6 +70,27 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# OpenAPI 3.0.3 스키마를 사용하도록 강제 설정
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    from fastapi.openapi.utils import get_openapi
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # OpenAPI 버전을 3.0.3으로 강제 설정
+    openapi_schema["openapi"] = "3.0.3"
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
 common_responses = {
     404: {"model": Message, "description": "Ticker not found"},
     500: {"model": Message, "description": "Internal Server Error"},
@@ -138,10 +123,62 @@ def dataframe_to_safe_json(df: Optional[pd.DataFrame]) -> List[Dict[str, Any]]:
     # 컬럼명을 안전하게 문자열로 변환
     df_copy.columns = [str(col).replace(' ', '_') for col in df_copy.columns]
     
+    # Stock Splits 컬럼명을 Stock_Splits로 변경
+    if 'Stock_Splits' in df_copy.columns:
+        df_copy = df_copy.rename(columns={'Stock_Splits': 'Stock_Splits'})
+    
     # 모든 NaN, NaT, inf 값을 파이썬의 None으로 변환
     df_copy = df_copy.replace([np.inf, -np.inf], None)
     df_copy = df_copy.where(pd.notna(df_copy), None)
     
+    records = df_copy.to_dict(orient="records")
+    
+    # 각 레코드를 순회하며 타입을 안전하게 변환
+    for record in records:
+        for key, value in record.items():
+            if value is None:
+                continue
+            elif isinstance(value, (pd.Timestamp, np.datetime64)):
+                try:
+                    if pd.notna(value):
+                        record[key] = pd.Timestamp(value).isoformat()
+                    else:
+                        record[key] = None
+                except:
+                    record[key] = None
+            elif isinstance(value, (np.int64, np.int32, np.int16, np.int8)):
+                record[key] = int(value)
+            elif isinstance(value, (np.float64, np.float32, np.float16)):
+                if np.isnan(value) or np.isinf(value):
+                    record[key] = None
+                else:
+                    record[key] = float(value)
+            elif isinstance(value, (np.bool_, bool)):
+                record[key] = bool(value)
+            elif isinstance(value, bytes):
+                record[key] = value.decode('utf-8', errors='ignore')
+    
+    return records
+
+def convert_to_financials_data(df: Optional[pd.DataFrame]) -> List[Dict[str, Any]]:
+    """Convert DataFrame to FinancialsData format."""
+    if df is None or df.empty:
+        return []
+    
+    # 인덱스가 금융 데이터 항목이고 컬럼이 연도인 경우
+    df_copy = df.copy()
+    
+    # 인덱스를 리셋하여 index 컬럼으로 만들기
+    df_copy = df_copy.reset_index()
+    
+    # 컬럼명을 안전하겎 문자열로 변환
+    df_copy.columns = [str(col).replace(' ', '_') for col in df_copy.columns]
+    
+    # NaN, inf 값 처리
+    df_copy = df_copy.replace([np.inf, -np.inf], None)
+    df_copy = df_copy.where(pd.notna(df_copy), None)
+    
+    # 레코드로 변환
     records = df_copy.to_dict(orient="records")
     
     # 각 레코드를 순회하며 타입을 안전하게 변환

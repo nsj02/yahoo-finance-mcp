@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from .models import *
+from models import *
 from datetime import datetime, timedelta
 import logging
 import concurrent.futures
@@ -190,14 +190,18 @@ def fetch_and_save_market_indices(db, start_date, end_date):
         for market_name, symbol in indices.items():
             logger.info(f"{market_name} 지수 데이터 가져오는 중...")
             
-            # 야후 파이낸스에서 데이터 가져오기
-            df = yf.download(symbol, start=start_date, end=end_date, progress=False)
+            # 야후 파이낸스에서 데이터 가져오기 (auto_adjust=False 명시)
+            df = yf.download(symbol, start=start_date, end=end_date, progress=False, auto_adjust=False)
             
             if df.empty:
                 logger.warning(f"{market_name} 지수 데이터가 없습니다.")
                 continue
             
-            # 오류 수정: Series인 경우 DataFrame으로 변환
+            # MultiIndex 컬럼 처리 (yfinance 최신 버전 대응)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.droplevel(1)
+            
+            # Series인 경우 DataFrame으로 변환
             if isinstance(df, pd.Series):
                 df = df.to_frame().T
             
@@ -217,16 +221,22 @@ def fetch_and_save_market_indices(db, start_date, end_date):
             df.fillna(0, inplace=True)
             
             # 저장
-            for _, row in df.iterrows():
+            for idx, row in df.iterrows():
                 try:
-                    # 날짜 처리 수정
-                    if isinstance(row['date'], pd.Timestamp):
-                        date_value = row['date'].date()
-                    elif hasattr(row['date'], 'date'):
-                        date_value = row['date'].date()
+                    # 날짜 처리 수정 - DataFrame의 인덱스를 사용
+                    if isinstance(idx, pd.Timestamp):
+                        date_value = idx.date()
+                    elif hasattr(idx, 'date'):
+                        date_value = idx.date()
                     else:
-                        # 문자열이나 다른 형식인 경우
-                        date_value = pd.to_datetime(row['date']).date()
+                        # 인덱스가 아닌 경우 row에서 추출
+                        date_col = row['date']
+                        if isinstance(date_col, pd.Timestamp):
+                            date_value = date_col.date()
+                        elif hasattr(date_col, 'date'):
+                            date_value = date_col.date()
+                        else:
+                            date_value = pd.to_datetime(date_col).date()
                     
                     # 이미 있는지 확인
                     existing_index = db.query(MarketIndex).filter_by(

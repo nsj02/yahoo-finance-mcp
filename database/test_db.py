@@ -1,7 +1,7 @@
 # test_db.py - 빠른 테스트를 위한 소수 종목 데이터베이스 구축
 
-from .models import Session, init_db
-from .data_importer import *
+from models import Session, init_db
+from data_importer import *
 import logging
 
 # 로깅 설정

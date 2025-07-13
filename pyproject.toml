@@ -1,13 +1,13 @@
 [project]
-name = "yahoo-finance-api"
+name = "yahoo-finance-mcp"
 version = "1.0.0"
-description = "FastAPI server for Yahoo Finance data integration"
+description = "Yahoo Finance API & Database System - FastAPI server and Korean stock database management"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    {name = "Yahoo Finance API Team", email = "dev@example.com"},
+    {name = "Yahoo Finance MCP Team", email = "dev@example.com"},
 ]
-keywords = ["yahoo", "finance", "fastapi", "stocks", "api"]
+keywords = ["yahoo", "finance", "fastapi", "stocks", "api", "database", "korean-stocks", "kospi", "kosdaq"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -19,12 +19,19 @@ classifiers = [
     "Topic :: Office/Business :: Financial",
 ]
 dependencies = [
+    # Core API dependencies
     "yfinance>=0.2.38",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.5.0",
     "numpy>=1.24.0",
     "pandas>=2.0.0",
+    # Database dependencies
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "pykrx>=1.0.0",
+    "ta>=0.11.0",
+    "tqdm>=4.66.0",
 ]
 
 [project.optional-dependencies]
